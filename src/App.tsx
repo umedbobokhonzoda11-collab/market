@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, 
   Search, 
   Menu, 
   X, 
@@ -16,7 +15,20 @@ import {
   Truck,
   ShieldCheck,
   RotateCcw,
-  Plus
+  Plus,
+  User,
+  Mail,
+  Camera,
+  CheckCircle2,
+  Trash2,
+  Sparkles,
+  Smartphone,
+  LayoutGrid,
+  CreditCard,
+  ShoppingBag,
+  Home,
+  Monitor,
+  Watch
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -102,6 +114,61 @@ const CategoryCard = ({ name, image }: { name: string, image: string }) => (
   </motion.div>
 );
 
+const ProductPromo = () => {
+  const [index, setIndex] = useState(0);
+  
+  const items = [
+    // Ensuring these are direct links to true transparent PNGs from pngimg.com
+    { id: 'tshirt', image: "https://pngimg.com/uploads/tshirt/tshirt_PNG5438.png" },
+    { id: 'pants', image: "https://pngimg.com/uploads/pants/pants_PNG102046.png" },
+    { id: 'shoes', image: "https://pngimg.com/uploads/running_shoes/running_shoes_PNG5823.png" },
+    { id: 'iphone', image: "https://pngimg.com/uploads/iphone_14/iphone_14_PNG1.png" },
+    { id: 'samsung', image: "https://pngimg.com/uploads/samsung/samsung_PNG43.png" },
+    { id: 'rolex', image: "https://pngimg.com/uploads/watches/watches_PNG9866.png" },
+    { id: 'casio', image: "https://pngimg.com/uploads/watches/watches_PNG9894.png" },
+    { id: 'white-sofa', image: "https://pngimg.com/uploads/sofa/sofa_PNG6642.png" },
+    { id: 'red-sofa', image: "https://pngimg.com/uploads/sofa/sofa_PNG6645.png" },
+    { id: 'bmw', image: "https://pngimg.com/uploads/bmw/bmw_PNG1702.png" },
+    { id: 'mercedes', image: "https://pngimg.com/uploads/mercedes/mercedes_PNG8014.png" },
+    { id: 'house', image: "https://pngimg.com/uploads/house/house_PNG63.png" }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % items.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [items.length]);
+
+  return (
+    <div className="relative h-[480px] w-full max-w-2xl mt-4 mb-20 flex items-center justify-center pointer-events-none overflow-hidden">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -50 }}
+          transition={{ duration: 0.6 }}
+          className="absolute inset-0 flex items-center justify-center p-8"
+        >
+          <motion.img
+            key={items[index].image}
+            src={items[index].image}
+            alt="Product"
+            className="max-w-[85%] max-h-[85%] object-contain pointer-events-auto"
+            referrerPolicy="no-referrer"
+            style={{ 
+              filter: 'contrast(1.05)',
+              // Ensuring absolute transparency on any non-transparent edges if source has slight noise
+              backgroundColor: 'transparent'
+            }}
+          />
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+};
+
 const ProductCard = ({ product }: { 
   product: typeof PRODUCTS[0], 
   key?: string | number 
@@ -156,16 +223,36 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'home' | 'products' | 'userStore'>('home');
   
   // Product State
-  const [productList, setProductList] = useState(() => [
-    ...PRODUCTS.map(p => ({ ...p, id: p.id + 100 })),
-    ...PRODUCTS.map(p => ({ ...p, id: p.id + 200 })),
-    ...PRODUCTS.map(p => ({ ...p, id: p.id + 300 })),
-    ...PRODUCTS.map(p => ({ ...p, id: p.id + 400 })),
-    ...PRODUCTS.map(p => ({ ...p, id: p.id + 500 })),
-    ...PRODUCTS.map(p => ({ ...p, id: p.id + 600 })),
-    ...PRODUCTS.map(p => ({ ...p, id: p.id + 700 })),
-    ...PRODUCTS.map(p => ({ ...p, id: p.id + 800 })),
-  ]);
+  const [productList, setProductList] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('emerald_luxe_user_products');
+      const userAdded = saved ? JSON.parse(saved) : [];
+      return [...userAdded, ...ALL_PRODUCTS];
+    }
+    return ALL_PRODUCTS;
+  });
+
+  // Profile State
+  const [isProfileSetup, setIsProfileSetup] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('emerald_luxe_is_setup') === 'true';
+    }
+    return false;
+  });
+  
+  const [userProfile, setUserProfile] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('emerald_luxe_profile');
+      return saved ? JSON.parse(saved) : { name: "", email: "", avatar: "" };
+    }
+    return { name: "", email: "", avatar: "" };
+  });
+
+  const [profileFormData, setProfileFormData] = useState({
+    name: "",
+    email: "",
+    avatar: ""
+  });
 
   // Form State
   const [showForm, setShowForm] = useState(false);
@@ -191,14 +278,31 @@ export default function App() {
       category: formData.category,
       image: formData.image || `https://picsum.photos/seed/${Date.now()}/800/1000`,
       description: formData.description || "Маҳсулот дар ҳолати хуб мебошад",
-      rating: 5
+      rating: 5,
+      isUserProduct: true
     };
 
     setProductList(prev => [newProduct, ...prev]);
     setShowForm(false);
     setFormData({ name: "", price: "", category: "Либос", image: "", description: "" });
-    setCurrentView('products');
+    setCurrentView('userStore'); // Stay in store after adding, so they can see it in their list
     window.scrollTo(0, 0);
+  };
+
+  const handleDeleteProduct = (id: number) => {
+    if (window.confirm("Оё шумо мутмаин ҳастед, ки мехоҳед ин маҳсулотро нест кунед?")) {
+      setProductList(prev => prev.filter(p => p.id !== id));
+    }
+  };
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileFormData.name || !profileFormData.email) {
+      alert("Лутфан ном ва почтаи худро ворид кунед");
+      return;
+    }
+    setUserProfile(profileFormData);
+    setIsProfileSetup(true);
   };
 
   useEffect(() => {
@@ -206,6 +310,17 @@ export default function App() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Persistence Effects
+  useEffect(() => {
+    localStorage.setItem('emerald_luxe_is_setup', isProfileSetup.toString());
+    localStorage.setItem('emerald_luxe_profile', JSON.stringify(userProfile));
+  }, [isProfileSetup, userProfile]);
+
+  useEffect(() => {
+    const userOnly = productList.filter(p => (p as any).isUserProduct);
+    localStorage.setItem('emerald_luxe_user_products', JSON.stringify(userOnly));
+  }, [productList]);
 
   return (
     <div className="min-h-screen">
@@ -316,78 +431,42 @@ export default function App() {
             exit={{ opacity: 0 }}
           >
             {/* Hero Section */}
-            <header className="relative h-screen flex items-center justify-center overflow-hidden bg-emerald-950">
-              <motion.div 
-                initial={{ opacity: 0, scale: 1.1 }}
-                animate={{ opacity: 0.4, scale: 1 }}
-                transition={{ duration: 2 }}
-                className="absolute inset-0"
-              >
-                <img 
-                  src="https://picsum.photos/seed/luxury/1920/1080" 
-                  alt="Hero Background" 
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              </motion.div>
-
-              <div className="relative z-10 text-center text-white px-6">
-                <motion.p 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="text-xs font-bold uppercase tracking-[0.4em] mb-4"
-                >
-                  Баҳор-Тобистон 2026
-                </motion.p>
-                <motion.h2 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7 }}
-                  className="text-6xl md:text-9xl font-serif italic mb-8"
-                >
-                  Умед Мағоза
-                </motion.h2>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.9 }}
-                  className="flex flex-col items-center gap-4"
-                >
-                  <button 
-                    onClick={() => {
-                      setCurrentView('products');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="group px-10 py-4 bg-white text-emerald-950 font-bold uppercase text-xs tracking-widest hover:bg-emerald-800 hover:text-white transition-all overflow-hidden relative w-64"
-                  >
-                    <span className="relative z-10">Ҳама маҳсулот</span>
-                    <motion.div 
-                      className="absolute inset-0 bg-emerald-700 -translate-x-full group-hover:translate-x-0 transition-transform"
-                    />
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      setCurrentView('userStore');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="group px-10 py-4 bg-transparent border border-white/30 text-white font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-emerald-950 transition-all overflow-hidden relative w-64"
-                  >
-                    <span className="relative z-10">Маҳсулоти Ман</span>
-                  </button>
-                </motion.div>
+            <header className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-900 to-emerald-950">
+              <div className="absolute inset-0 opacity-20 pointer-events-none">
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
               </div>
 
-              <motion.div 
-                animate={{ y: [0, 10, 0] }}
-                transition={{ repeat: Infinity, duration: 2 }}
-                className="absolute bottom-12 text-white/50 flex flex-col items-center"
-              >
-                    <div className="w-px h-16 bg-white/20 mx-auto" />
-                    <p className="text-[10px] uppercase tracking-widest mt-4 [writing-mode:vertical-rl]">Ҳаракат</p>
-                  </motion.div>
-                </header>
+              <div className="max-w-7xl mx-auto px-6 relative z-10 w-full flex flex-col items-center">
+                
+                <ProductPromo />
+
+                <div className="flex flex-col sm:flex-row gap-6 w-full max-w-2xl justify-center mt-8">
+                  <button 
+                    onClick={() => setCurrentView('products')}
+                    className="group px-12 py-6 bg-white text-emerald-900 font-bold uppercase text-sm tracking-widest hover:bg-emerald-50 transition-all rounded-xl shadow-2xl flex items-center justify-center gap-3 active:scale-95"
+                  >
+                    <ShoppingBag size={20} />
+                    Ҳама маҳсулот
+                  </button>
+                  <button 
+                    onClick={() => setCurrentView('userStore')}
+                    className="group px-12 py-6 bg-emerald-800 text-white font-bold uppercase text-sm tracking-widest hover:bg-emerald-700 transition-all rounded-xl shadow-2xl flex items-center justify-center gap-3 border border-white/20 active:scale-95"
+                  >
+                    <User size={20} />
+                    Маҳсулоти Ман
+                  </button>
+                </div>
+              </div>
+
+              {/* Simple Scroll Indicator */}
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+                <motion.div 
+                  animate={{ height: [32, 48, 32] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-1 bg-emerald-400 rounded-full" 
+                />
+              </div>
+            </header>
 
                 {/* Features Rail */}
                 <section className="bg-white py-12 border-b border-zinc-100">
@@ -512,115 +591,247 @@ export default function App() {
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <ShoppingBag size={48} className="mx-auto text-emerald-900 mb-8" />
-                  <h2 className="text-5xl md:text-7xl font-serif italic mb-6">Мағозаи Ман</h2>
-                  <p className="text-emerald-900 font-bold uppercase tracking-[0.4em] mb-12 italic text-sm">Хуш омадед ба маҷмӯаи шахсии шумо</p>
-                  
-                  <div className="w-24 h-px bg-zinc-300 mx-auto mb-16" />
-                  
-                  {!showForm ? (
-                    <div className="py-20 border-2 border-dashed border-zinc-200 rounded-lg flex flex-col items-center justify-center group hover:border-emerald-800 transition-colors cursor-pointer bg-zinc-50/50">
-                      <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-6 group-hover:scale-110 transition-transform">
-                        <Plus size={32} className="text-emerald-900" />
-                      </div>
-                      <h3 className="text-xl font-serif mb-2">Мағозаи шумо холӣ аст</h3>
-                      <p className="text-sm text-zinc-500 mb-8 max-w-xs mx-auto">Аввалин маҳсулоти худро илова кунед ва ба фурӯш оғоз намоед</p>
-                      <button 
-                        onClick={() => setShowForm(true)}
-                        className="px-8 py-3 bg-emerald-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-emerald-800 transition-colors"
-                      >
-                        Маҳсулоти худро гузоред
-                      </button>
-                    </div>
-                  ) : (
-                    <motion.form 
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      onSubmit={handleAddProduct}
-                      className="max-w-xl mx-auto text-left bg-zinc-50 p-8 border border-zinc-200 shadow-sm"
-                    >
-                      <h3 className="text-2xl font-serif italic mb-8 border-b border-zinc-200 pb-4">Иловаи маҳсулоти нав</h3>
+                  {!isProfileSetup ? (
+                    <div className="max-w-xl mx-auto">
+                      <User size={48} className="mx-auto text-emerald-900 mb-8" />
+                      <h2 className="text-4xl md:text-5xl font-serif italic mb-6">Танзими Профил</h2>
+                      <p className="text-zinc-500 mb-12">Барои оғози фурӯш, лутфан маълумоти худро ворид кунед</p>
                       
-                      <div className="space-y-6">
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Номи маҳсулот</label>
-                          <input 
-                            required
-                            type="text"
-                            value={formData.name}
-                            onChange={e => setFormData({...formData, name: e.target.value})}
-                            className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800"
-                            placeholder="Мисол: iPhone 15 Pro"
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
+                      <form onSubmit={handleSaveProfile} className="text-left bg-zinc-50 p-8 border border-zinc-200">
+                        <div className="space-y-6">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Нарх (смн)</label>
-                            <input 
-                              required
-                              type="number"
-                              value={formData.price}
-                              onChange={e => setFormData({...formData, price: e.target.value})}
-                              className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800"
-                              placeholder="100"
-                            />
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Номи пурра</label>
+                            <div className="relative">
+                              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                              <input 
+                                required
+                                type="text"
+                                value={profileFormData.name}
+                                onChange={e => setProfileFormData({...profileFormData, name: e.target.value})}
+                                className="w-full bg-white border border-zinc-200 pl-12 pr-4 py-3 focus:outline-none focus:border-emerald-800"
+                                placeholder="Мисол: Умед Бобохонзода"
+                              />
+                            </div>
                           </div>
+
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Категория</label>
-                            <select 
-                              value={formData.category}
-                              onChange={e => setFormData({...formData, category: e.target.value})}
-                              className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800"
-                            >
-                              <option>Либос</option>
-                              <option>Телефон ва Аксессуарҳо</option>
-                              <option>Мошинҳо</option>
-                              <option>Ҳайвонот</option>
-                              <option>Хонаҳо</option>
-                            </select>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Почтаи электронӣ</label>
+                            <div className="relative">
+                              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                              <input 
+                                required
+                                type="email"
+                                value={profileFormData.email}
+                                onChange={e => setProfileFormData({...profileFormData, email: e.target.value})}
+                                className="w-full bg-white border border-zinc-200 pl-12 pr-4 py-3 focus:outline-none focus:border-emerald-800"
+                                placeholder="tadjik@example.tj"
+                              />
+                            </div>
                           </div>
-                        </div>
 
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Истиноди акс (URL)</label>
-                          <input 
-                            type="text"
-                            value={formData.image}
-                            onChange={e => setFormData({...formData, image: e.target.value})}
-                            className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800"
-                            placeholder="https://example.com/image.jpg"
-                          />
-                        </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Акс (URL)</label>
+                            <div className="relative">
+                              <Camera className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                              <input 
+                                type="text"
+                                value={profileFormData.avatar}
+                                onChange={e => setProfileFormData({...profileFormData, avatar: e.target.value})}
+                                className="w-full bg-white border border-zinc-200 pl-12 pr-4 py-3 focus:outline-none focus:border-emerald-800"
+                                placeholder="https://example.com/avatar.jpg"
+                              />
+                            </div>
+                          </div>
 
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Дар бораи маҳсулот</label>
-                          <textarea 
-                            rows={4}
-                            value={formData.description}
-                            onChange={e => setFormData({...formData, description: e.target.value})}
-                            className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800"
-                            placeholder="Маълумоти васеъ дар бораи маҳсулот..."
-                          />
-                        </div>
-
-                        <div className="flex gap-4 pt-4">
-                          <button 
-                            type="button"
-                            onClick={() => setShowForm(false)}
-                            className="flex-1 px-8 py-4 border border-zinc-200 font-bold uppercase text-[10px] tracking-widest hover:bg-zinc-100 transition-colors"
-                          >
-                            Лағв кардан
-                          </button>
                           <button 
                             type="submit"
-                            className="flex-1 px-8 py-4 bg-emerald-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-emerald-800 transition-colors"
+                            className="w-full py-4 bg-emerald-900 text-white font-bold uppercase text-xs tracking-widest hover:bg-emerald-800 transition-colors shadow-lg"
                           >
-                            Гузоштан
+                            Захира кардан
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Store Header with Profile Info */}
+                      <div className="flex flex-col items-center mb-16">
+                        <div className="relative mb-6">
+                          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-emerald-900 shadow-xl bg-zinc-100">
+                            {userProfile.avatar ? (
+                              <img src={userProfile.avatar} alt={userProfile.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-emerald-100 text-emerald-900 text-3xl font-serif">
+                                {userProfile.name.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="absolute -bottom-1 -right-1 bg-emerald-900 text-white p-1 rounded-full border-2 border-white">
+                            <CheckCircle2 size={16} />
+                          </div>
+                        </div>
+                        <h2 className="text-4xl font-serif italic mb-2">{userProfile.name}</h2>
+                        <p className="text-zinc-500 text-xs uppercase tracking-[0.2em] mb-4">{userProfile.email}</p>
+                        <div className="flex gap-2">
+                          <div className="px-4 py-1 bg-emerald-100 text-emerald-900 text-[10px] font-bold uppercase tracking-widest rounded-full">
+                            Мағозаи Тасдиқшуда
+                          </div>
+                          <button 
+                            onClick={() => {
+                              setIsProfileSetup(false);
+                              setProfileFormData(userProfile);
+                            }}
+                            className="px-4 py-1 border border-zinc-200 text-zinc-500 text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-zinc-50 transition-colors"
+                          >
+                            Ивази Профил
                           </button>
                         </div>
                       </div>
-                    </motion.form>
+
+                      <div className="w-24 h-px bg-zinc-300 mx-auto mb-16" />
+                      
+                      {!showForm ? (
+                        <div className="py-20 border-2 border-dashed border-zinc-200 rounded-lg flex flex-col items-center justify-center group hover:border-emerald-800 transition-colors cursor-pointer bg-zinc-50/50">
+                          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-6 group-hover:scale-110 transition-transform">
+                            <Plus size={32} className="text-emerald-900" />
+                          </div>
+                          <h3 className="text-xl font-serif mb-2">Маҳсулоти нав илова кунед</h3>
+                          <p className="text-sm text-zinc-500 mb-8 max-w-xs mx-auto">Ин бахши шахсии шумо барои идоракунии тиҷорат аст</p>
+                          <button 
+                            onClick={() => setShowForm(true)}
+                            className="px-8 py-3 bg-emerald-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-emerald-800 transition-colors"
+                          >
+                            Маҳсулоти худро гузоред
+                          </button>
+                        </div>
+                      ) : (
+                        <motion.form 
+                          initial={{ opacity: 0, y: 30 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          onSubmit={handleAddProduct}
+                          className="max-w-xl mx-auto text-left bg-zinc-50 p-8 border border-zinc-200 shadow-sm"
+                        >
+                          <h3 className="text-2xl font-serif italic mb-8 border-b border-zinc-200 pb-4">Иловаи маҳсулоти нав</h3>
+                          
+                          <div className="space-y-6">
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Номи маҳсулот</label>
+                                <input 
+                                  required
+                                  type="text"
+                                  value={formData.name}
+                                  onChange={e => setFormData({...formData, name: e.target.value})}
+                                  className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800"
+                                  placeholder="Мисол: iPhone 15 Pro"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Нарх (смн)</label>
+                                <input 
+                                  required
+                                  type="number"
+                                  value={formData.price}
+                                  onChange={e => setFormData({...formData, price: e.target.value})}
+                                  className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800"
+                                  placeholder="100"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Категория</label>
+                                <select 
+                                  value={formData.category}
+                                  onChange={e => setFormData({...formData, category: e.target.value})}
+                                  className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800"
+                                >
+                                  <option>Либос</option>
+                                  <option>Телефон ва Аксессуарҳо</option>
+                                  <option>Мошинҳо</option>
+                                  <option>Ҳайвонот</option>
+                                  <option>Хонаҳо</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Истиноди акс (URL)</label>
+                              <input 
+                                type="text"
+                                value={formData.image}
+                                onChange={e => setFormData({...formData, image: e.target.value})}
+                                className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800"
+                                placeholder="https://example.com/image.jpg"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Дар бораи маҳсулот</label>
+                              <textarea 
+                                rows={4}
+                                value={formData.description}
+                                onChange={e => setFormData({...formData, description: e.target.value})}
+                                className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800"
+                                placeholder="Маълумоти васеъ дар бораи маҳсулот..."
+                              />
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                              <button 
+                                type="button"
+                                onClick={() => setShowForm(false)}
+                                className="flex-1 px-8 py-4 border border-zinc-200 font-bold uppercase text-[10px] tracking-widest hover:bg-zinc-100 transition-colors"
+                              >
+                                Лағв кардан
+                              </button>
+                              <button 
+                                type="submit"
+                                className="flex-1 px-8 py-4 bg-emerald-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-emerald-800 transition-colors"
+                              >
+                                Гузоштан
+                              </button>
+                            </div>
+                          </div>
+                        </motion.form>
+                      )}
+                      {/* My Products List */}
+                      <div className="mt-24 text-left">
+                        <div className="flex items-center justify-between mb-8 border-b border-zinc-200 pb-4">
+                          <h3 className="text-2xl font-serif italic">Маҳсулоти гузоштаи шумо</h3>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                            {productList.filter(p => (p as any).isUserProduct).length} МАҲСУЛОТ
+                          </span>
+                        </div>
+                        
+                        {productList.filter(p => (p as any).isUserProduct).length === 0 ? (
+                          <p className="text-zinc-400 text-sm italic text-center py-12">Шумо то ҳол ягон маҳсулот нагузоштаед.</p>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                            {productList.filter(p => (p as any).isUserProduct).map((product) => (
+                              <div key={product.id} className="bg-white border border-zinc-200 p-4 relative group">
+                                <div className="aspect-[4/5] mb-4 overflow-hidden bg-zinc-100">
+                                  <img 
+                                    src={product.image} 
+                                    alt={product.name} 
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </div>
+                                <h4 className="font-medium text-sm mb-1">{product.name}</h4>
+                                <p className="text-emerald-900 font-bold text-sm mb-4">{product.price} смн</p>
+                                
+                                <button 
+                                  onClick={() => handleDeleteProduct(product.id)}
+                                  className="absolute top-6 right-6 p-2 bg-white/90 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-50"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
 
                   <div className="mt-20 flex flex-col items-center gap-6">
