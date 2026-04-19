@@ -114,31 +114,18 @@ const CategoryCard = ({ name, image }: { name: string, image: string }) => (
   </motion.div>
 );
 
-const ProductPromo = () => {
+const ProductPromo = ({ items }: { items: { id: string | number, image: string }[] }) => {
   const [index, setIndex] = useState(0);
   
-  const items = [
-    // Ensuring these are direct links to true transparent PNGs from pngimg.com
-    { id: 'tshirt', image: "https://pngimg.com/uploads/tshirt/tshirt_PNG5438.png" },
-    { id: 'pants', image: "https://pngimg.com/uploads/pants/pants_PNG102046.png" },
-    { id: 'shoes', image: "https://pngimg.com/uploads/running_shoes/running_shoes_PNG5823.png" },
-    { id: 'iphone', image: "https://pngimg.com/uploads/iphone_14/iphone_14_PNG1.png" },
-    { id: 'samsung', image: "https://pngimg.com/uploads/samsung/samsung_PNG43.png" },
-    { id: 'rolex', image: "https://pngimg.com/uploads/watches/watches_PNG9866.png" },
-    { id: 'casio', image: "https://pngimg.com/uploads/watches/watches_PNG9894.png" },
-    { id: 'white-sofa', image: "https://pngimg.com/uploads/sofa/sofa_PNG6642.png" },
-    { id: 'red-sofa', image: "https://pngimg.com/uploads/sofa/sofa_PNG6645.png" },
-    { id: 'bmw', image: "https://pngimg.com/uploads/bmw/bmw_PNG1702.png" },
-    { id: 'mercedes', image: "https://pngimg.com/uploads/mercedes/mercedes_PNG8014.png" },
-    { id: 'house', image: "https://pngimg.com/uploads/house/house_PNG63.png" }
-  ];
-
   useEffect(() => {
+    if (items.length === 0) return;
     const timer = setInterval(() => {
       setIndex((prev) => (prev + 1) % items.length);
     }, 4500);
     return () => clearInterval(timer);
   }, [items.length]);
+
+  if (items.length === 0) return null;
 
   return (
     <div className="relative h-[480px] w-full max-w-2xl mt-4 mb-20 flex items-center justify-center pointer-events-none overflow-hidden">
@@ -152,14 +139,13 @@ const ProductPromo = () => {
           className="absolute inset-0 flex items-center justify-center p-8"
         >
           <motion.img
-            key={items[index].image}
-            src={items[index].image}
+            key={items[index]?.image}
+            src={items[index]?.image}
             alt="Product"
             className="max-w-[85%] max-h-[85%] object-contain pointer-events-auto"
             referrerPolicy="no-referrer"
             style={{ 
               filter: 'contrast(1.05)',
-              // Ensuring absolute transparency on any non-transparent edges if source has slight noise
               backgroundColor: 'transparent'
             }}
           />
@@ -219,8 +205,31 @@ const ProductCard = ({ product }: {
 export default function App() {
   const [scrollY, setScrollY] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [currentView, setCurrentView] = useState<'home' | 'products' | 'userStore'>('home');
+
+  // Promo Images State
+  const [promoItems, setPromoItems] = useState<{ id: string | number, image: string }[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('emerald_luxe_promo_items');
+      return saved ? JSON.parse(saved) : [
+        { id: 'tshirt', image: "https://pngimg.com/uploads/tshirt/tshirt_PNG5438.png" },
+        { id: 'pants', image: "https://pngimg.com/uploads/pants/pants_PNG102046.png" },
+        { id: 'shoes', image: "https://pngimg.com/uploads/running_shoes/running_shoes_PNG5823.png" },
+        { id: 'iphone', image: "https://pngimg.com/uploads/iphone_14/iphone_14_PNG1.png" },
+        { id: 'samsung', image: "https://pngimg.com/uploads/samsung/samsung_PNG43.png" },
+        { id: 'rolex', image: "https://pngimg.com/uploads/watches/watches_PNG9866.png" },
+        { id: 'casio', image: "https://pngimg.com/uploads/watches/watches_PNG9894.png" },
+        { id: 'white-sofa', image: "https://pngimg.com/uploads/sofa/sofa_PNG6642.png" },
+        { id: 'red-sofa', image: "https://pngimg.com/uploads/sofa/sofa_PNG6645.png" },
+        { id: 'bmw', image: "https://pngimg.com/uploads/bmw/bmw_PNG1702.png" },
+        { id: 'mercedes', image: "https://pngimg.com/uploads/mercedes/mercedes_PNG8014.png" },
+        { id: 'house', image: "https://pngimg.com/uploads/house/house_PNG63.png" }
+      ];
+    }
+    return [];
+  });
   
   // Product State
   const [productList, setProductList] = useState(() => {
@@ -322,8 +331,119 @@ export default function App() {
     localStorage.setItem('emerald_luxe_user_products', JSON.stringify(userOnly));
   }, [productList]);
 
+  useEffect(() => {
+    localStorage.setItem('emerald_luxe_promo_items', JSON.stringify(promoItems));
+  }, [promoItems]);
+
+  const [newPromoUrl, setNewPromoUrl] = useState("");
+  const handleAddPromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPromoUrl) return;
+    setPromoItems([...promoItems, { id: Date.now(), image: newPromoUrl }]);
+    setNewPromoUrl("");
+  };
+
+  const handleRemovePromo = (id: string | number) => {
+    setPromoItems(prev => prev.filter(item => item.id !== id));
+  };
+
   return (
     <div className="min-h-screen">
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col shadow-2xl rounded-2xl"
+            >
+              <div className="p-8 border-b border-zinc-100 flex justify-between items-center bg-emerald-950 text-white">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="text-emerald-400" size={24} />
+                  <h2 className="text-2xl font-serif italic">Танзимот</h2>
+                </div>
+                <button onClick={() => setIsSettingsOpen(false)} className="hover:rotate-90 transition-transform">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 bg-zinc-50">
+                <div className="mb-12">
+                  <div className="flex items-center gap-2 mb-6">
+                    <Monitor size={20} className="text-emerald-900" />
+                    <h3 className="text-lg font-serif">Реклама (Слайдери асосӣ)</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+                    {promoItems.map((item) => (
+                      <div key={item.id} className="relative aspect-square bg-white border border-zinc-200 rounded-lg overflow-hidden group">
+                        <img 
+                          src={item.image} 
+                          className="w-full h-full object-contain p-2" 
+                          referrerPolicy="no-referrer" 
+                          alt="Promo item"
+                        />
+                        <button 
+                          onClick={() => handleRemovePromo(item.id)}
+                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    <div className="aspect-square border-2 border-dashed border-zinc-300 rounded-lg flex items-center justify-center bg-zinc-100/50">
+                       <Plus size={24} className="text-zinc-400" />
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleAddPromo} className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Camera className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                      <input 
+                        type="text" 
+                        value={newPromoUrl}
+                        onChange={(e) => setNewPromoUrl(e.target.value)}
+                        placeholder="URL-и акси нав (+)"
+                        className="w-full bg-white border border-zinc-200 pl-12 pr-4 py-3 focus:outline-none focus:border-emerald-800 text-sm"
+                      />
+                    </div>
+                    <button 
+                      type="submit"
+                      className="px-6 py-3 bg-emerald-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-emerald-800 transition-colors"
+                    >
+                      Илова кардан
+                    </button>
+                  </form>
+                </div>
+
+                <div className="border-t border-zinc-200 pt-8 mt-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Filter size={18} className="text-emerald-900" />
+                    <h4 className="text-sm font-bold uppercase tracking-widest">Дигар танзимотҳо</h4>
+                  </div>
+                  <p className="text-xs text-zinc-400 italic">Дуруст будани реклама ба шаффофияти (PNG) суратҳо вобаста аст.</p>
+                </div>
+              </div>
+
+              <div className="p-6 bg-white border-t border-zinc-100 flex justify-end">
+                <button 
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="px-8 py-3 bg-emerald-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-emerald-800 transition-colors"
+                >
+                  Тайёр
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Navigation */}
       <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${scrollY > 50 || currentView === 'products' ? 'bg-white/90 backdrop-blur-md py-4 shadow-sm' : 'bg-transparent py-8'}`}>
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
@@ -333,7 +453,7 @@ export default function App() {
             </button>
             <div className={`hidden md:flex gap-6 text-xs font-bold uppercase tracking-widest h-full items-center ${scrollY > 50 || currentView === 'products' ? 'text-zinc-900' : 'text-white'}`}>
               <button onClick={() => setCurrentView('home')} className="hover:text-emerald-700 transition-colors uppercase">Асосӣ</button>
-              <button className="hover:text-emerald-700 transition-colors uppercase">Танзимот</button>
+              <button onClick={() => setIsSettingsOpen(true)} className="hover:text-emerald-700 transition-colors uppercase">Танзимот</button>
               <a href="#" className="hover:text-emerald-700 transition-colors uppercase">Дар бораи мо</a>
             </div>
           </div>
@@ -400,7 +520,13 @@ export default function App() {
                 >
                   Асосӣ
                 </button>
-                <button className="hover:text-emerald-400 transition-colors w-fit text-left italic">
+                <button 
+                  onClick={() => {
+                    setIsSettingsOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="hover:text-emerald-400 transition-colors w-fit text-left italic"
+                >
                   Танзимот
                 </button>
                 <button className="hover:text-emerald-400 transition-colors w-fit text-left italic">
@@ -438,7 +564,7 @@ export default function App() {
 
               <div className="max-w-7xl mx-auto px-6 relative z-10 w-full flex flex-col items-center">
                 
-                <ProductPromo />
+                <ProductPromo items={promoItems} />
 
                 <div className="flex flex-col sm:flex-row gap-6 w-full max-w-2xl justify-center mt-8">
                   <button 
