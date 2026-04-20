@@ -28,9 +28,83 @@ import {
   ShoppingBag,
   Home,
   Monitor,
-  Watch
+  Watch,
+  Languages,
+  Maximize
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, Reorder } from 'motion/react';
+
+const TRANSLATIONS = {
+  tg: {
+    home: "Асосӣ",
+    settings: "Танзимот",
+    about: "Дар бораи мо",
+    all_products: "Ҳама маҳсулот",
+    my_products: "Маҳсулоти Ман",
+    free_delivery: "Расондан Ройгон",
+    secure_payment: "Пардохти Бехатар",
+    return_policy: "Бозпас то 3 рӯз",
+    advertising: "Реклама",
+    screen_size: "Андозаи экран",
+    language: "Забон",
+    add_image: "Иловаи акс",
+    delete: "Нест кардан",
+    save: "Захира кардан",
+    back: "Бозгашт",
+    ready: "Тайёр",
+    profile_setup: "Танзими Профил",
+    new_product: "Маҳсулоти нав",
+    quick_view: "Намоиши зуд",
+    verified_store: "Мағозаи Тасдиқшуда",
+    all_rights: "Ҳамаи ҳуқуқҳо ҳифз шудаанд"
+  },
+  ru: {
+    home: "Главная",
+    settings: "Настройки",
+    about: "О нас",
+    all_products: "Все товары",
+    my_products: "Мои товары",
+    free_delivery: "Бесплатная доставка",
+    secure_payment: "Безопасная оплата",
+    return_policy: "Возврат до 3 дней",
+    advertising: "Реклама",
+    screen_size: "Размер экрана",
+    language: "Язык",
+    add_image: "Добавить фото",
+    delete: "Удалить",
+    save: "Сохранить",
+    back: "Назад",
+    ready: "Готово",
+    profile_setup: "Настройка профиля",
+    new_product: "Новый товар",
+    quick_view: "Быстрый просмотр",
+    verified_store: "Проверенный магазин",
+    all_rights: "Все права защищены"
+  },
+  en: {
+    home: "Home",
+    settings: "Settings",
+    about: "About Us",
+    all_products: "All Products",
+    my_products: "My Products",
+    free_delivery: "Free Delivery",
+    secure_payment: "Secure Payment",
+    return_policy: "3-Day Return",
+    advertising: "Advertising",
+    screen_size: "Screen Scale",
+    language: "Language",
+    add_image: "Add Image",
+    delete: "Delete",
+    save: "Save",
+    back: "Back",
+    ready: "Done",
+    profile_setup: "Profile Setup",
+    new_product: "New Product",
+    quick_view: "Quick View",
+    verified_store: "Verified Store",
+    all_rights: "All rights reserved"
+  }
+};
 
 const PRODUCTS = [
   {
@@ -155,8 +229,9 @@ const ProductPromo = ({ items }: { items: { id: string | number, image: string }
   );
 };
 
-const ProductCard = ({ product }: { 
+const ProductCard = ({ product, language }: { 
   product: typeof PRODUCTS[0], 
+  language: 'tg' | 'ru' | 'en',
   key?: string | number 
 }) => (
   <motion.div 
@@ -182,7 +257,7 @@ const ProductCard = ({ product }: {
       </div>
       <div className="absolute bottom-0 left-0 w-full p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
         <button className="w-full bg-white/90 backdrop-blur-sm py-3 text-xs font-bold uppercase tracking-widest hover:bg-emerald-900 hover:text-white transition-colors">
-          Намоиши зуд
+          {TRANSLATIONS[language]?.quick_view || "Намоиши зуд"}
         </button>
       </div>
     </div>
@@ -197,7 +272,7 @@ const ProductCard = ({ product }: {
         </div>
         <p className="text-[10px] text-zinc-400 mt-2">{product.description}</p>
       </div>
-      <p className="font-medium text-emerald-900">{product.price} смн</p>
+      <p className="font-medium text-emerald-900">{product.price} {language === 'en' ? 'TJS' : 'смн'}</p>
     </div>
   </motion.div>
 );
@@ -206,8 +281,25 @@ export default function App() {
   const [scrollY, setScrollY] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'menu' | 'promo' | 'scale' | 'lang'>('menu');
   const [cartCount, setCartCount] = useState(0);
   const [currentView, setCurrentView] = useState<'home' | 'products' | 'userStore'>('home');
+
+  // Scale and Language States
+  const [screenScale, setScreenScale] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return parseInt(localStorage.getItem('emerald_luxe_scale') || '100');
+    }
+    return 100;
+  });
+  const [language, setLanguage] = useState<'tg' | 'ru' | 'en'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('emerald_luxe_lang') as any) || 'tg';
+    }
+    return 'tg';
+  });
+
+  const t = TRANSLATIONS[language];
 
   // Promo Images State
   const [promoItems, setPromoItems] = useState<{ id: string | number, image: string }[]>(() => {
@@ -335,7 +427,19 @@ export default function App() {
     localStorage.setItem('emerald_luxe_promo_items', JSON.stringify(promoItems));
   }, [promoItems]);
 
+  useEffect(() => {
+    localStorage.setItem('emerald_luxe_scale', screenScale.toString());
+    (document.documentElement.style as any).zoom = `${screenScale}%`;
+  }, [screenScale]);
+
+  useEffect(() => {
+    localStorage.setItem('emerald_luxe_lang', language);
+  }, [language]);
+
   const [newPromoUrl, setNewPromoUrl] = useState("");
+  const [longPressId, setLongPressId] = useState<string | number | null>(null);
+  let longPressTimer: any;
+
   const handleAddPromo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPromoUrl) return;
@@ -345,6 +449,17 @@ export default function App() {
 
   const handleRemovePromo = (id: string | number) => {
     setPromoItems(prev => prev.filter(item => item.id !== id));
+    setLongPressId(null);
+  };
+
+  const startLongPress = (id: string | number) => {
+    longPressTimer = setTimeout(() => {
+      setLongPressId(id);
+    }, 800);
+  };
+
+  const clearLongPress = () => {
+    clearTimeout(longPressTimer);
   };
 
   return (
@@ -362,82 +477,180 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col shadow-2xl rounded-2xl"
+              className="bg-white w-full max-w-xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl rounded-3xl pb-2"
             >
-              <div className="p-8 border-b border-zinc-100 flex justify-between items-center bg-emerald-950 text-white">
+              <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-emerald-950 text-white">
                 <div className="flex items-center gap-3">
+                  {settingsTab !== 'menu' && (
+                    <button onClick={() => setSettingsTab('menu')} className="mr-2 hover:bg-white/10 p-2 rounded-full transition-colors">
+                      <ChevronLeft size={20} />
+                    </button>
+                  )}
                   <Sparkles className="text-emerald-400" size={24} />
-                  <h2 className="text-2xl font-serif italic">Танзимот</h2>
+                  <h2 className="text-xl font-serif italic">
+                    {settingsTab === 'menu' ? t.settings : 
+                     settingsTab === 'promo' ? t.advertising : 
+                     settingsTab === 'scale' ? t.screen_size : t.language}
+                  </h2>
                 </div>
-                <button onClick={() => setIsSettingsOpen(false)} className="hover:rotate-90 transition-transform">
+                <button onClick={() => { setIsSettingsOpen(false); setSettingsTab('menu'); }} className="hover:rotate-90 transition-transform p-2">
                   <X size={24} />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 bg-zinc-50">
-                <div className="mb-12">
-                  <div className="flex items-center gap-2 mb-6">
-                    <Monitor size={20} className="text-emerald-900" />
-                    <h3 className="text-lg font-serif">Реклама (Слайдери асосӣ)</h3>
+              <div className="flex-1 overflow-y-auto p-6 bg-zinc-50">
+                {settingsTab === 'menu' ? (
+                  <div className="grid grid-cols-1 gap-4">
+                    <button 
+                      onClick={() => setSettingsTab('promo')}
+                      className="flex items-center justify-between p-6 bg-white border border-zinc-200 rounded-2xl hover:border-emerald-600 hover:shadow-md transition-all group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Monitor className="text-emerald-900 group-hover:scale-110 transition-transform" />
+                        <span className="font-serif text-lg">{t.advertising}</span>
+                      </div>
+                      <ChevronRight className="text-zinc-400" />
+                    </button>
+
+                    <button 
+                      onClick={() => setSettingsTab('scale')}
+                      className="flex items-center justify-between p-6 bg-white border border-zinc-200 rounded-2xl hover:border-emerald-600 hover:shadow-md transition-all group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Maximize className="text-emerald-900 group-hover:scale-110 transition-transform" />
+                        <span className="font-serif text-lg">{t.screen_size}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-zinc-400 font-bold">{screenScale}%</span>
+                        <ChevronRight className="text-zinc-400" />
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={() => setSettingsTab('lang')}
+                      className="flex items-center justify-between p-6 bg-white border border-zinc-200 rounded-2xl hover:border-emerald-600 hover:shadow-md transition-all group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Languages className="text-emerald-900 group-hover:scale-110 transition-transform" />
+                        <span className="font-serif text-lg">{t.language}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-zinc-400 font-bold uppercase">{language}</span>
+                        <ChevronRight className="text-zinc-400" />
+                      </div>
+                    </button>
                   </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-                    {promoItems.map((item) => (
-                      <div key={item.id} className="relative aspect-square bg-white border border-zinc-200 rounded-lg overflow-hidden group">
-                        <img 
-                          src={item.image} 
-                          className="w-full h-full object-contain p-2" 
-                          referrerPolicy="no-referrer" 
-                          alt="Promo item"
+                ) : settingsTab === 'promo' ? (
+                  <div>
+                    <p className="text-[10px] text-zinc-400 mb-6 italic uppercase tracking-wider">Барои ҳаракат додан суратҳоро кашед. Барои нест кардан пахш карда нигоҳ доред.</p>
+                    
+                    <Reorder.Group axis="y" values={promoItems} onReorder={setPromoItems} className="space-y-4 mb-8">
+                      {promoItems.map((item) => (
+                        <Reorder.Item 
+                          key={item.id} 
+                          value={item}
+                          onMouseDown={() => startLongPress(item.id)}
+                          onMouseUp={clearLongPress}
+                          onMouseLeave={clearLongPress}
+                          onTouchStart={() => startLongPress(item.id)}
+                          onTouchEnd={clearLongPress}
+                          className="relative flex items-center gap-4 p-4 bg-white border border-zinc-200 rounded-2xl cursor-grab active:cursor-grabbing shadow-sm"
+                        >
+                          <div className="w-16 h-16 bg-zinc-50 rounded-lg overflow-hidden flex-shrink-0">
+                            <img src={item.image} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                          </div>
+                          <div className="flex-1 overflow-hidden">
+                             <p className="text-[10px] text-zinc-400 truncate">{item.image}</p>
+                          </div>
+                          <Menu className="text-zinc-300" size={20} />
+
+                          <AnimatePresence>
+                            {longPressId === item.id && (
+                              <motion.div 
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                className="absolute inset-0 bg-red-600/95 backdrop-blur-sm rounded-2xl flex items-center justify-center gap-6 text-white px-8"
+                              >
+                                <span className="font-bold text-xs uppercase tracking-widest">{t.delete}?</span>
+                                <div className="flex gap-4">
+                                  <button onClick={() => handleRemovePromo(item.id)} className="w-10 h-10 bg-white text-red-600 rounded-full flex items-center justify-center shadow-lg"><Trash2 size={18} /></button>
+                                  <button onClick={() => setLongPressId(null)} className="w-10 h-10 bg-white/20 text-white rounded-full flex items-center justify-center"><X size={18} /></button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </Reorder.Item>
+                      ))}
+                    </Reorder.Group>
+
+                    <form onSubmit={handleAddPromo} className="space-y-4 bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Plus size={16} className="text-emerald-800" />
+                        <h4 className="text-xs font-bold uppercase tracking-widest">{t.add_image}</h4>
+                      </div>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={newPromoUrl}
+                          onChange={(e) => setNewPromoUrl(e.target.value)}
+                          placeholder="URL-и акси нав (+)"
+                          className="flex-1 bg-zinc-50 border border-zinc-200 px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-800 text-sm"
                         />
                         <button 
-                          onClick={() => handleRemovePromo(item.id)}
-                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          type="submit"
+                          className="px-6 bg-emerald-900 text-white rounded-xl hover:bg-emerald-800 transition-colors"
                         >
-                          <Trash2 size={14} />
+                          <Plus size={20} />
                         </button>
                       </div>
+                    </form>
+                  </div>
+                ) : settingsTab === 'scale' ? (
+                  <div className="py-12 px-4 flex flex-col items-center">
+                    <div className="text-6xl font-serif italic text-emerald-900 mb-8">{screenScale}%</div>
+                    <input 
+                      type="range"
+                      min="70"
+                      max="130"
+                      step="5"
+                      value={screenScale}
+                      onChange={(e) => setScreenScale(parseInt(e.target.value))}
+                      className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-900 mb-8"
+                    />
+                    <div className="flex justify-between w-full text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+                      <span>70%</span>
+                      <span>100%</span>
+                      <span>130%</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {[
+                      { id: 'tg', label: 'Тоҷикӣ' },
+                      { id: 'ru', label: 'Русский' },
+                      { id: 'en', label: 'English' }
+                    ].map((lang) => (
+                      <button 
+                        key={lang.id}
+                        onClick={() => setLanguage(lang.id as any)}
+                        className={`flex items-center justify-between p-6 border rounded-2xl transition-all ${language === lang.id ? 'border-emerald-800 bg-emerald-50 text-emerald-950' : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300'}`}
+                      >
+                        <span className="font-serif text-lg">{lang.label}</span>
+                        {language === lang.id && <CheckCircle2 className="text-emerald-800" size={20} />}
+                      </button>
                     ))}
-                    <div className="aspect-square border-2 border-dashed border-zinc-300 rounded-lg flex items-center justify-center bg-zinc-100/50">
-                       <Plus size={24} className="text-zinc-400" />
-                    </div>
                   </div>
-
-                  <form onSubmit={handleAddPromo} className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Camera className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-                      <input 
-                        type="text" 
-                        value={newPromoUrl}
-                        onChange={(e) => setNewPromoUrl(e.target.value)}
-                        placeholder="URL-и акси нав (+)"
-                        className="w-full bg-white border border-zinc-200 pl-12 pr-4 py-3 focus:outline-none focus:border-emerald-800 text-sm"
-                      />
-                    </div>
-                    <button 
-                      type="submit"
-                      className="px-6 py-3 bg-emerald-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-emerald-800 transition-colors"
-                    >
-                      Илова кардан
-                    </button>
-                  </form>
-                </div>
-
-                <div className="border-t border-zinc-200 pt-8 mt-8">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Filter size={18} className="text-emerald-900" />
-                    <h4 className="text-sm font-bold uppercase tracking-widest">Дигар танзимотҳо</h4>
-                  </div>
-                  <p className="text-xs text-zinc-400 italic">Дуруст будани реклама ба шаффофияти (PNG) суратҳо вобаста аст.</p>
-                </div>
+                )}
               </div>
 
-              <div className="p-6 bg-white border-t border-zinc-100 flex justify-end">
+              <div className="p-6 bg-white border-t border-zinc-100 flex justify-between items-center">
+                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest italic">Emerald Luxe Boutique</p>
                 <button 
-                  onClick={() => setIsSettingsOpen(false)}
-                  className="px-8 py-3 bg-emerald-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-emerald-800 transition-colors"
+                  onClick={() => { setIsSettingsOpen(false); setSettingsTab('menu'); }}
+                  className="px-10 py-4 bg-emerald-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-emerald-800 transition-colors rounded-xl shadow-lg"
                 >
-                  Тайёр
+                  {t.ready}
                 </button>
               </div>
             </motion.div>
@@ -452,9 +665,9 @@ export default function App() {
               <Menu size={24} />
             </button>
             <div className={`hidden md:flex gap-6 text-xs font-bold uppercase tracking-widest h-full items-center ${scrollY > 50 || currentView === 'products' ? 'text-zinc-900' : 'text-white'}`}>
-              <button onClick={() => setCurrentView('home')} className="hover:text-emerald-700 transition-colors uppercase">Асосӣ</button>
-              <button onClick={() => setIsSettingsOpen(true)} className="hover:text-emerald-700 transition-colors uppercase">Танзимот</button>
-              <a href="#" className="hover:text-emerald-700 transition-colors uppercase">Дар бораи мо</a>
+              <button onClick={() => setCurrentView('home')} className="hover:text-emerald-700 transition-colors uppercase">{t.home}</button>
+              <button onClick={() => setIsSettingsOpen(true)} className="hover:text-emerald-700 transition-colors uppercase">{t.settings}</button>
+              <a href="#" className="hover:text-emerald-700 transition-colors uppercase">{t.about}</a>
             </div>
           </div>
           
@@ -518,7 +731,7 @@ export default function App() {
                   }}
                   className="hover:text-emerald-400 transition-colors w-fit text-left italic"
                 >
-                  Асосӣ
+                  {t.home}
                 </button>
                 <button 
                   onClick={() => {
@@ -527,10 +740,10 @@ export default function App() {
                   }}
                   className="hover:text-emerald-400 transition-colors w-fit text-left italic"
                 >
-                  Танзимот
+                  {t.settings}
                 </button>
                 <button className="hover:text-emerald-400 transition-colors w-fit text-left italic">
-                  Дар бораи мо
+                  {t.about}
                 </button>
               </nav>
             </motion.div>
@@ -598,9 +811,9 @@ export default function App() {
                 <section className="bg-white py-12 border-b border-zinc-100">
                   <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-3 gap-8">
                     {[
-                      { icon: Truck, title: "Расондан Ройгон", desc: "Дохили шаҳри Душанбе ройгон, дигар шаҳрҳо худпардохт" },
-                      { icon: ShieldCheck, title: "Пардохти Бехатар", desc: "Кафолати амнияти маблағҳои шумо" },
-                      { icon: RotateCcw, title: "Бозпас то 3 рӯз", desc: "Бо беҳтарин ҳолат ва сифати аслӣ!" }
+                      { icon: Truck, title: t.free_delivery, desc: language === 'en' ? "Free within Dushanbe" : "Дохили шаҳри Душанбе ройгон" },
+                      { icon: ShieldCheck, title: t.secure_payment, desc: language === 'en' ? "Secure payments" : "Кафолати амнияти маблағҳои шумо" },
+                      { icon: RotateCcw, title: t.return_policy, desc: language === 'en' ? "Up to 3 days" : "Бо беҳтарин ҳолат ва сифати аслӣ!" }
                     ].map((item, i) => (
                       <div key={i} className="flex flex-col items-center text-center gap-2">
                         <div className="relative h-12 flex items-center justify-center">
@@ -655,7 +868,7 @@ export default function App() {
                   </div>
                 </section>
 
-                <FooterSection />
+                <FooterSection t={t} language={language} />
               </motion.div>
         ) : currentView === 'products' ? (
           <motion.div
@@ -675,15 +888,23 @@ export default function App() {
                 </button>
                 <h2 className="text-6xl font-serif italic mb-4">Ҳамаи маҳсулот</h2>
                 <div className="flex flex-col md:flex-row justify-between items-baseline border-b border-zinc-200 pb-8">
-                  <p className="text-zinc-500 font-light max-w-xl">Маҷмӯаи пурраи маҳсулоти эксклюзивии моро кашф кунед. Ҷадвали 4-сутуна бо ҳаракати амудӣ.</p>
-                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mt-4 md:mt-0">{productList.length} МАҲСУЛОТ</p>
+                  <p className="text-zinc-500 font-light max-w-xl">{language === 'en' ? 'Discover our full collection' : 'Маҷмӯаи пурраи маҳсулоти эксклюзивии моро кашф кунед.'}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mt-4 md:mt-0">{productList.length} {language === 'en' ? 'PRODUCTS' : 'МАҲСУЛОТ'}</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 border-t border-l border-zinc-200 w-full mb-12">
                 {productList.map((product, idx) => (
-                  <div key={`${product.id}-${idx}`} className="border-r border-b border-zinc-200 p-4 md:p-8 hover:bg-zinc-50 transition-colors group">
-                    <ProductCard product={product} />
+                  <div key={`${product.id}-${idx}`} className="border-r border-b border-zinc-200 p-4 md:p-8 hover:bg-zinc-50 transition-colors group relative">
+                    <ProductCard product={product} language={language} />
+                    {currentView === 'userStore' && (product as any).isUserProduct && (
+                      <button 
+                        onClick={() => handleDeleteProduct(product.id)}
+                        className="absolute top-4 right-4 p-2 bg-white text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -697,7 +918,7 @@ export default function App() {
                 </div>
               </div>
               
-              <FooterSection />
+              <FooterSection t={t} language={language} />
             </div>
           </motion.div>
         ) : (
@@ -800,7 +1021,7 @@ export default function App() {
                         <p className="text-zinc-500 text-xs uppercase tracking-[0.2em] mb-4">{userProfile.email}</p>
                         <div className="flex gap-2">
                           <div className="px-4 py-1 bg-emerald-100 text-emerald-900 text-[10px] font-bold uppercase tracking-widest rounded-full">
-                            Мағозаи Тасдиқшуда
+                            {t.verified_store}
                           </div>
                           <button 
                             onClick={() => {
@@ -809,7 +1030,7 @@ export default function App() {
                             }}
                             className="px-4 py-1 border border-zinc-200 text-zinc-500 text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-zinc-50 transition-colors"
                           >
-                            Ивази Профил
+                            {language === 'en' ? 'Edit Profile' : 'Ивази Профил'}
                           </button>
                         </div>
                       </div>
@@ -821,13 +1042,13 @@ export default function App() {
                           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-6 group-hover:scale-110 transition-transform">
                             <Plus size={32} className="text-emerald-900" />
                           </div>
-                          <h3 className="text-xl font-serif mb-2">Маҳсулоти нав илова кунед</h3>
-                          <p className="text-sm text-zinc-500 mb-8 max-w-xs mx-auto">Ин бахши шахсии шумо барои идоракунии тиҷорат аст</p>
+                          <h3 className="text-xl font-serif mb-2">{language === 'en' ? 'Add New Product' : 'Маҳсулоти нав илова кунед'}</h3>
+                          <p className="text-sm text-zinc-500 mb-8 max-w-xs mx-auto">{language === 'en' ? 'Manage your business here' : 'Ин бахши шахсии шумо барои идоракунии тиҷорат аст'}</p>
                           <button 
                             onClick={() => setShowForm(true)}
                             className="px-8 py-3 bg-emerald-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-emerald-800 transition-colors"
                           >
-                            Маҳсулоти худро гузоред
+                            {language === 'en' ? 'Start Selling' : 'Маҳсулоти худро гузоред'}
                           </button>
                         </div>
                       ) : (
@@ -869,13 +1090,13 @@ export default function App() {
                                 <select 
                                   value={formData.category}
                                   onChange={e => setFormData({...formData, category: e.target.value})}
-                                  className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800"
+                                  className="w-full bg-white border border-zinc-200 px-4 py-3 focus:outline-none focus:border-emerald-800 rounded-lg"
                                 >
-                                  <option>Либос</option>
-                                  <option>Телефон ва Аксессуарҳо</option>
-                                  <option>Мошинҳо</option>
-                                  <option>Ҳайвонот</option>
-                                  <option>Хонаҳо</option>
+                                  <option value="Либос">{language === 'en' ? 'Clothing' : 'Либос'}</option>
+                                  <option value="Телефон ва Аксессуарҳо">{language === 'en' ? 'Smartphones' : 'Телефон ва Аксессуарҳо'}</option>
+                                  <option value="Мошинҳо">{language === 'en' ? 'Cars' : 'Мошинҳо'}</option>
+                                  <option value="Ҳайвонот">{language === 'en' ? 'Pets' : 'Ҳайвонот'}</option>
+                                  <option value="Хонаҳо">{language === 'en' ? 'Real Estate' : 'Хонаҳо'}</option>
                                 </select>
                               </div>
                             </div>
@@ -923,19 +1144,19 @@ export default function App() {
                       {/* My Products List */}
                       <div className="mt-24 text-left">
                         <div className="flex items-center justify-between mb-8 border-b border-zinc-200 pb-4">
-                          <h3 className="text-2xl font-serif italic">Маҳсулоти гузоштаи шумо</h3>
+                          <h3 className="text-2xl font-serif italic">{language === 'en' ? 'Your Products' : 'Маҳсулоти гузоштаи шумо'}</h3>
                           <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                            {productList.filter(p => (p as any).isUserProduct).length} МАҲСУЛОТ
+                            {productList.filter(p => (p as any).isUserProduct).length} {language === 'en' ? 'PRODUCTS' : 'МАҲСУЛОТ'}
                           </span>
                         </div>
                         
                         {productList.filter(p => (p as any).isUserProduct).length === 0 ? (
-                          <p className="text-zinc-400 text-sm italic text-center py-12">Шумо то ҳол ягон маҳсулот нагузоштаед.</p>
+                          <p className="text-zinc-400 text-sm italic text-center py-12">{language === 'en' ? 'No products yet.' : 'Шумо то ҳол ягон маҳсулот нагузоштаед.'}</p>
                         ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                             {productList.filter(p => (p as any).isUserProduct).map((product) => (
-                              <div key={product.id} className="bg-white border border-zinc-200 p-4 relative group">
-                                <div className="aspect-[4/5] mb-4 overflow-hidden bg-zinc-100">
+                              <div key={product.id} className="bg-white border border-zinc-200 p-4 relative group rounded-xl">
+                                <div className="aspect-[4/5] mb-4 overflow-hidden bg-zinc-100 rounded-lg">
                                   <img 
                                     src={product.image} 
                                     alt={product.name} 
@@ -944,7 +1165,7 @@ export default function App() {
                                   />
                                 </div>
                                 <h4 className="font-medium text-sm mb-1">{product.name}</h4>
-                                <p className="text-emerald-900 font-bold text-sm mb-4">{product.price} смн</p>
+                                <p className="text-emerald-900 font-bold text-sm mb-4">{product.price} {language === 'en' ? 'TJS' : 'смн'}</p>
                                 
                                 <button 
                                   onClick={() => handleDeleteProduct(product.id)}
@@ -960,17 +1181,18 @@ export default function App() {
                     </>
                   )}
 
-                  <div className="mt-20 flex flex-col items-center gap-6">
-                    <p className="text-zinc-500 text-sm font-light italic">Суроғаи мағозаи шумо: emeraldluxe.tj/store/my-collection</p>
+                  <div className="mt-20 flex flex-col items-center gap-6 pb-20">
+                    <p className="text-zinc-500 text-sm font-light italic">{language === 'en' ? 'Store address' : 'Суроғаи мағозаи шумо'}: ummmmed.tj/store/my-collection</p>
                     <button 
                       onClick={() => setCurrentView('home')}
-                      className="px-12 py-5 bg-emerald-950 text-white font-bold uppercase text-xs tracking-widest hover:bg-emerald-800 transition-all shadow-xl"
+                      className="px-12 py-5 bg-emerald-950 text-white font-bold uppercase text-xs tracking-widest hover:bg-emerald-800 transition-all shadow-xl rounded-xl"
                     >
-                      Бозгашт ба саҳифаи асосӣ
+                      {t.back}
                     </button>
                   </div>
                 </motion.div>
               </div>
+              <FooterSection t={t} language={language} />
             </div>
           </motion.div>
         )}
@@ -979,11 +1201,11 @@ export default function App() {
   );
 }
 
-const FooterSection = () => (
+const FooterSection = ({ t, language }: { t: any, language: string }) => (
   <footer className="bg-zinc-950 text-white py-24 px-6 mt-auto">
     <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
       <div className="md:col-span-1">
-        <h2 className="text-3xl font-serif italic font-bold mb-8">ТОҶИКИСТОН</h2>
+        <h2 className="text-3xl font-serif italic font-bold mb-8">Ummmmed</h2>
         <div className="flex gap-4">
           <a href="#" className="w-10 h-10 border border-white/10 rounded-full flex items-center justify-center hover:bg-white hover:text-black transition-all">
             <Instagram size={18} />
@@ -998,22 +1220,17 @@ const FooterSection = () => (
       </div>
       
       <div>
-        <h4 className="text-xs font-bold uppercase tracking-[0.2em] mb-6">Хидматрасонӣ ба мизоҷон</h4>
+        <h4 className="text-xs font-bold uppercase tracking-[0.2em] mb-6">{language === 'en' ? 'Customer Service' : 'Хидматрасонӣ ба мизоҷон'}</h4>
         <ul className="flex flex-col gap-4 text-sm text-zinc-500 font-light">
-          <li><a href="#" className="hover:text-white transition-colors">Тамос бо мо</a></li>
-          <li><a href="#" className="hover:text-white transition-colors">Пайгирии фармоишҳо</a></li>
-          <li><a href="#" className="hover:text-white transition-colors">Интиқол ва баргардонидан</a></li>
-          <li><a href="#" className="hover:text-white transition-colors">Усулҳои пардохт</a></li>
-          <li><a href="#" className="hover:text-white transition-colors">Баҳо додан</a></li>
+          <li><a href="#" className="hover:text-white transition-colors">{language === 'en' ? 'Contact Us' : 'Тамос бо мо'}</a></li>
+          <li><a href="#" className="hover:text-white transition-colors">{language === 'en' ? 'Order Tracking' : 'Пайгирии фармоишҳо'}</a></li>
+          <li><a href="#" className="hover:text-white transition-colors">{language === 'en' ? 'Shipping' : 'Интиқол ва баргардонидан'}</a></li>
         </ul>
       </div>
     </div>
     
     <div className="max-w-7xl mx-auto mt-24 pt-8 border-t border-white/5 flex flex-col md:row justify-between items-center gap-4 text-[10px] uppercase tracking-widest text-zinc-600">
-      <p>© 2026 Emerald Luxe Boutique. Ҳамаи ҳуқуқҳо ҳифз шудаанд.</p>
-      <div className="flex gap-8">
-        <span className="flex items-center gap-2 italic">Барои беҳтарин будан сохта шудааст</span>
-      </div>
+      <p>© 2026 Ummmmed Boutique. {t.all_rights}.</p>
     </div>
   </footer>
 );
